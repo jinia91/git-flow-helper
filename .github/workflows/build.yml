@@ -2,7 +2,7 @@ name: PR Merge Strategy Reminder
 
 on:
   pull_request:
-    types: [opened, reopened, synchronized, review_requested, review_request_removed]
+    types: [opened, synchronize, edited]
 
 jobs:
   pr-on:
