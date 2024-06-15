@@ -2,7 +2,7 @@ name: Auto Merge on Approve and Label
 
 on:
   pull_request:
-    types: [opened, edited]
+    types: [opened, edited, synchronize]
 
 jobs:
   auto-merge:
@@ -36,10 +36,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge the PR
+      - name: Merge Pull Request
         if: steps.check-label-and-approval.outputs.result == 'true'
-        uses: peter-evans/merge-pull@v1
+        uses: juliangruber/merge-pull-request-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          method: merge
-          delete_branch: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          number: 1
+          method: squash # merge rebase
+          repo: juliangruber/octokit-action
