@@ -24,9 +24,6 @@ jobs:
             const { data: labels } = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number });
             const hasMergeLabel = labels.some(label => label.name === 'merge');
 
-#            const { data: reviews } = await github.rest.pulls.listReviews({ owner, repo, pull_number: issue_number });
-#            const approved = reviews.some(review => review.state === 'APPROVED');
-
             if (hasMergeLabel) {
               return true;
             } else {
