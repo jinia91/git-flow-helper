@@ -1,15 +1,17 @@
-name: Enforce Merge Strategy
+name: PR Merge Strategy Reminder
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, edited]
     branches:
       - dev
       - main
       - release/*
+      - featue/*
+      - qa/*
 
 jobs:
-  enforce-merge-strategy:
+  remind-merge-strategy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -25,40 +27,50 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Enforce specific merge strategy
+      - name: Determine and comment merge strategy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           import requests
           import json
-          import os
-          
-          github_token = os.getenv('GITHUB_TOKEN')
-          pr_number = os.getenv('PR_NUMBER')
 
-          api_url = f"https://api.github.com/repos/${{ github.repository }}/pulls/{pr_number}"
+          api_url = f"https://api.github.com/repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }}"
+          comments_url = f"https://api.github.com/repos/${{ github.repository }}/issues/${{ env.PR_NUMBER }}/comments"
           headers = {
-            "Authorization": f"token {github_token}",
+            "Authorization": f"token ${{ secrets.GITHUB_TOKEN }}",
             "Accept": "application/vnd.github.v3+json"
           }
 
           pr_data = requests.get(api_url, headers=headers).json()
           base_branch = pr_data['base']['ref']
           head_branch = pr_data['head']['ref']
+          merge_message = ""
 
           if 'feature/' in head_branch and base_branch == 'dev':
-            merge_method = 'squash'
+            merge_message = "🔍 feature -> dev는 Squash merge 해야합니다! 확인해주세요!"
           elif 'qa/' in head_branch and 'release/' in base_branch:
-            merge_method = 'squash'
+            merge_message = "🔍 qa -> release는 Squash merge 해야합니다! 확인해주세요!"
           elif 'release/' in head_branch and base_branch in ['main', 'dev']:
-            merge_method = 'merge'
+            merge_message = "🔍 릴리즈 브랜치 -> main/dev는 merge commit 해야합니다! 확인해주세요!"
           else:
-            raise Exception("No specific merge strategy required.")
+            merge_message = "🔍 머지 방향을 제대로 설정한게 맞나요?"
 
-          merge_payload = {"merge_method": merge_method}
-          merge_response = requests.put(api_url + "/merge", headers=headers, data=json.dumps(merge_payload))
+          # Post or update the reminder comment
+          existing_comments = requests.get(comments_url, headers=headers).json()
+          comment_id = None
+          for comment in existing_comments:
+            if comment['user']['login'] == 'github-actions[bot]' and '🔍' in comment['body']:
+              comment_id = comment['id']
+              break
 
-          print("Merge response:", merge_response.json())
+          comment_body = {"body": merge_message}
+          if comment_id:
+            update_url = f"https://api.github.com/repos/${{ github.repository }}/issues/comments/{comment_id}"
+            response = requests.patch(update_url, headers=headers, json=comment_body)
+          else:
+            response = requests.post(comments_url, headers=headers, json=comment_body)
+
+          print("Comment updated or created:", response.json())
 
         shell: python
