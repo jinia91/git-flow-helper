@@ -1,8 +1,8 @@
 name: Auto Merge on Approve and Label
 
 on:
-  pull_request_target:
-    types: [labeled, unlabeled]
+  pull_request:
+    types: [opened, edited]
 
 jobs:
   auto-merge:
