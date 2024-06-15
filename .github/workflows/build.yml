@@ -1,33 +1,41 @@
-name: PR Merge Strategy Reminder
+name: Auto Sync Branch to Dev
 
 on:
+#  push:
+#    branches:
+#      - main
+
   pull_request:
-    types: [opened, synchronize, edited]
+    types: [edited]
 
 jobs:
-  pr-on:
+  auto-create-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: feature branch -> dev branch
-        if: github.event.pull_request.head.ref == 'feature/*' && github.event.pull_request.base.ref == 'dev'
-        uses: peter-evans/create-or-update-comment@v3
+      - name: Checkout the repository
+        uses: actions/checkout@v2
         with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            feature branch -> dev branch 는 **Squash and Merge** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
+          fetch-depth: 0
 
-      - name: qa branch -> release branch
-        if: github.event.pull_request.head.ref == 'qa/*' && github.event.pull_request.base.ref == 'release/*'
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            qa branch -> release branch 는 **Squash and Merge** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
+      - name: Setup Git Config
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
 
-      - name: release branch -> main / dev branch
-        if: startsWith(github.event.pull_request.head.ref, 'release/') && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'dev' || github.event.pull_request.base.ref == 'develop')
-        uses: peter-evans/create-or-update-comment@v3
+      - name: Identify Merged Branch
+        id: merged_branch
+        run: |
+          MERGED_BRANCH_NAME=$(git log -1 --pretty=%B | grep -oP 'Merge pull request #\d+ from \K[\w\-/]+')
+          echo "Merged branch name: $MERGED_BRANCH_NAME"
+          echo "::set-output name=branch::${MERGED_BRANCH_NAME}"
+
+      - name: Create Pull Request to Dev
+        if: steps.merged_branch.outputs.branch
+        uses: peter-evans/create-pull-request@v4
         with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            release branch -> main / dev branch 는 **Merge Commit** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.merged_branch.outputs.branch }}-to-dev
+          base: dev
+          title: "Sync ${ { steps.merged_branch.outputs.branch } } changes to Dev"
+          body: "This automated pull request merges changes from ${ { steps.merged_branch.outputs.branch } } to Dev."
+          labels: sync,auto-pr
