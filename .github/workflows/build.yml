@@ -6,7 +6,7 @@ on:
 #      - main
 
   pull_request:
-    types: [edited]
+    types: [opened, synchronize, edited]
 
 jobs:
   auto-create-pr:
