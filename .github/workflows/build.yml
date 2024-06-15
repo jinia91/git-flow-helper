@@ -1,43 +1,18 @@
-name: Auto Merge on Approve and Label
-
+name: Check PR can be merged
 on:
   pull_request:
-    types: [opened, edited, synchronize]
+    types: [labeled]
+    branches:
+      - release/*
 
 jobs:
-  auto-merge:
+  Run Actions:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v3
+      - name: Automatically Merge PR
+        uses: plm9606/automerge_actions@1.2.2
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-
-      - name: 머지 가능 여부 체크
-        id: check-label-and-approval
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const { data: labels } = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number });
-            const hasMergeLabel = labels.some(label => label.name === 'merge');
-
-            if (hasMergeLabel) {
-              return true;
-            } else {
-              console.log('머지할 수 없습니다');
-              return false;
-            }
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge Pull Request
-        if: steps.check-label-and-approval.outputs.result == 'true'
-        uses: juliangruber/merge-pull-request-action@v1
-        with:
+          label-name: merge
+          reviewers-number: 0
+          merge-method: squash
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          number: 1
-          method: squash # merge rebase
-          repo: juliangruber/octokit-action
