@@ -32,10 +32,13 @@ jobs:
         run: |
           import requests
           import json
+          
+          github_token = os.getenv('GITHUB_TOKEN')
+          pr_number = os.getenv('PR_NUMBER')
 
-          api_url = f"https://api.github.com/repos/${{ github.repository }}/pulls/{env.PR_NUMBER}"
+          api_url = f"https://api.github.com/repos/${{ github.repository }}/pulls/{pr_number}"
           headers = {
-            "Authorization": f"token {env.GITHUB_TOKEN}",
+            "Authorization": f"token {github_token}",
             "Accept": "application/vnd.github.v3+json"
           }
 
