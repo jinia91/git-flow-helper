@@ -25,7 +25,7 @@ jobs:
             qa branch -> release branch 는 **Squash and Merge** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
 
       - name: release branch -> main / dev branch
-        if: startsWith(github.event.pull_request.head.ref, 'release/') && (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'dev') || github.event.pull_request.base.ref == 'develop')
+        if: startsWith(github.event.pull_request.head.ref, 'release/') && (github.event.pull_request.base.ref == 'main') || github.event.pull_request.base.ref == 'dev') || github.event.pull_request.base.ref == 'develop')
         uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.pull_request.number }}
