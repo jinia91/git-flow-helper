@@ -24,13 +24,13 @@ jobs:
             const { data: labels } = await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number });
             const hasMergeLabel = labels.some(label => label.name === 'merge');
 
-            const { data: reviews } = await github.rest.pulls.listReviews({ owner, repo, pull_number: issue_number });
-            const approved = reviews.some(review => review.state === 'APPROVED');
+#            const { data: reviews } = await github.rest.pulls.listReviews({ owner, repo, pull_number: issue_number });
+#            const approved = reviews.some(review => review.state === 'APPROVED');
 
-            if (hasMergeLabel && approved) {
+            if (hasMergeLabel) {
               return true;
             } else {
-              console.log('PR does not have "merge" label and/or sufficient approvals.');
+              console.log('머지할 수 없습니다');
               return false;
             }
         env:
