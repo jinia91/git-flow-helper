@@ -2,75 +2,32 @@ name: PR Merge Strategy Reminder
 
 on:
   pull_request:
-    types: [opened, synchronize, edited]
-    branches:
-      - dev
-      - main
-      - release/*
-      - featue/*
-      - qa/*
+    types: [opened, reopened, synchronized, review_requested, review_request_removed]
 
 jobs:
-  remind-merge-strategy:
+  pr-on:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: feature branch -> dev branch
+        if: github.event.pull_request.head.ref == 'feature/*' && github.event.pull_request.base.ref == 'dev'
+        uses: peter-evans/create-or-update-comment@v3
         with:
-          python-version: '3.x'
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            feature branch -> dev branch 는 **Squash and Merge** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+      - name: qa branch -> release branch
+        if: github.event.pull_request.head.ref == 'qa/*' && github.event.pull_request.base.ref == 'release/*'
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            qa branch -> release branch 는 **Squash and Merge** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
 
-      - name: Determine and comment merge strategy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          import requests
-          import json
-
-          api_url = f"https://api.github.com/repos/${{ github.repository }}/pulls/${{ env.PR_NUMBER }}"
-          comments_url = f"https://api.github.com/repos/${{ github.repository }}/issues/${{ env.PR_NUMBER }}/comments"
-          headers = {
-            "Authorization": f"token ${{ secrets.GITHUB_TOKEN }}",
-            "Accept": "application/vnd.github.v3+json"
-          }
-
-          pr_data = requests.get(api_url, headers=headers).json()
-          base_branch = pr_data['base']['ref']
-          head_branch = pr_data['head']['ref']
-          merge_message = ""
-
-          if 'feature/' in head_branch and base_branch == 'dev':
-            merge_message = "🔍 feature -> dev는 Squash merge 해야합니다! 확인해주세요!"
-          elif 'qa/' in head_branch and 'release/' in base_branch:
-            merge_message = "🔍 qa -> release는 Squash merge 해야합니다! 확인해주세요!"
-          elif 'release/' in head_branch and base_branch in ['main', 'dev']:
-            merge_message = "🔍 릴리즈 브랜치 -> main/dev는 merge commit 해야합니다! 확인해주세요!"
-          else:
-            merge_message = "🔍 머지 방향을 제대로 설정한게 맞나요?"
-
-          # Post or update the reminder comment
-          existing_comments = requests.get(comments_url, headers=headers).json()
-          comment_id = None
-          for comment in existing_comments:
-            if comment['user']['login'] == 'github-actions[bot]' and '🔍' in comment['body']:
-              comment_id = comment['id']
-              break
-
-          comment_body = {"body": merge_message}
-          if comment_id:
-            update_url = f"https://api.github.com/repos/${{ github.repository }}/issues/comments/{comment_id}"
-            response = requests.patch(update_url, headers=headers, json=comment_body)
-          else:
-            response = requests.post(comments_url, headers=headers, json=comment_body)
-
-          print("Comment updated or created:", response.json())
-
-        shell: python
+      - name: release branch -> main / dev branch
+        if: github.event.pull_request.head.ref == 'release/*' && contains(fromJSON('["main", "dev"]'), github.event.pull_request.base.ref)
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            release branch -> main / dev branch 는 **Merge Commit** 전략을 사용합니다. 맞는 전략을 택했는지 확인해주세요.
