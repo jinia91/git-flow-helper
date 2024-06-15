@@ -3,13 +3,6 @@ name: PR Merge Strategy Reminder
 on:
   pull_request:
     types: [opened, synchronize, edited]
-    branches:
-      - main
-      - dev
-      - develop
-      - release/**
-      - feature/**
-      - qa/**
 
 jobs:
   pr-on:
