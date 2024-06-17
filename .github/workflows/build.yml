@@ -16,8 +16,8 @@ jobs:
         uses: actions/github-script@v5
         with:
           script: |
-            const headBranch = github.event.pull_request.head.ref;
-            const baseBranch = github.event.pull_request.base.ref;
+            const headBranch = context.payload.pull_request.head.ref;
+            const baseBranch = context.payload.pull_request.base.ref;
 
             // 브랜치 이름에 따라 버전 타입 결정
             let versionType;
@@ -57,6 +57,6 @@ jobs:
               owner: github.context.repo.owner,
               repo: github.context.repo.repo,
               ref: `refs/tags/${newTag}`,
-              sha: github.event.pull_request.merge_commit_sha
+              sha: context.payload.pull_request.merge_commit_sha
             });
 
