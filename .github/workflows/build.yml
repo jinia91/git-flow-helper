@@ -50,9 +50,9 @@ jobs:
             }
 
             const newTag = `v${major}.${minor}.${patch}`;
-            console.log(`Creating new tag: ${newTag}`);
+            console.log(`릴리즈될 버전은 : ${newTag} 입니다`);
 
-            // Create new tag
+            // 태그 마킹
             await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
