@@ -1,16 +1,62 @@
-name: Check PR can be merged
+name: main 브랜치 오토 태그 생성기
+
 on:
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize, edited]
+    types: [closed]
 
 jobs:
-  run:
+  auto-tag:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Automatically Merge PR
-        uses: plm9606/automerge_actions@1.2.2
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Tagging
+        uses: actions/github-script@v5
         with:
-          label-name: merge
-          reviewers-number: 0
-          merge-method: squash
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const headBranch = github.event.pull_request.head.ref;
+            const baseBranch = github.event.pull_request.base.ref;
+
+            // 브랜치 이름에 따라 버전 타입 결정
+            let versionType;
+            if (headBranch.startsWith('release/')) {
+              versionType = 'major';
+            } else if (headBranch.startsWith('hotfix/')) {
+              versionType = 'minor';
+            }
+
+            const tags = await github.rest.repos.listTags({
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo
+            });
+            
+            let latestTag = tags.data.length > 0 ? tags.data[0].name : 'v0.0.0';
+            const versionMatch = latestTag.match(/v(\d+)\.(\d+)\.(\d+)/);
+            let major = parseInt(versionMatch[1], 10);
+            let minor = parseInt(versionMatch[2], 10);
+
+            let date = new Date();
+            let year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            let day = date.getDate();
+            let patch = parseInt(`${year}${month}${day}`, 10);
+
+            if (versionType === 'major') {
+              major += 1; minor = 0; 
+            } else if (versionType === 'minor') {
+              minor += 1;
+            }
+
+            const newTag = `v${major}.${minor}.${patch}`;
+            console.log(`Creating new tag: ${newTag}`);
+
+            // Create new tag
+            await github.rest.git.createRef({
+              owner: github.context.repo.owner,
+              repo: github.context.repo.repo,
+              ref: `refs/tags/${newTag}`,
+              sha: github.event.pull_request.merge_commit_sha
+            });
+
